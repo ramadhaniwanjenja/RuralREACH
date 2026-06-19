@@ -23,8 +23,8 @@ Voice is push-to-talk (walkie-talkie style, ~2 s latency) because LoRa is half-d
 
 ## 2. Links
 
-- **GitHub repository:** `https://github.com/ramadhaniwanjenja/RuralREACH/blob/main/README.md`
-- **Video demo (5–10 min):** `<paste your YouTube unlisted / Drive link here>`
+- **GitHub repository:** [RuralREACH on GitHub](https://github.com/ramadhaniwanjenja/RuralREACH)
+- **Video demo (5–10 min):** [Watch the demo](https://drive.google.com/file/d/1rypfK1TotT0imnOMQn0IE0Nynq8grNhq/view?usp=sharing)
 
 ---
 
@@ -136,6 +136,3 @@ Field deployment is a single portable device moved between confirmed dead-zone l
 
 ---
 
-## 10. Licence
-
-Apache License 2.0 — see `LICENSE`.
