@@ -81,11 +81,9 @@ All design assets are in the `/designs` and `/hardware` folders:
 
 - ![Home](designs/architecture/RuralReach%20system%20architecture%20overview.png) — overall system architecture
 - ![Home](designs/hardware/LoRa_node/LoRa_node.png) — **EasyEDA node circuit schematic**
-- ![Home](designs/hardware/Gateway_node/) — **EasyEDA gateway circuit schematic**
+- ![Home](designs/hardware/Gateway_node/Gatewaynode.png) — **EasyEDA gateway circuit schematic**
 
 ---
-
-## 6. Navigation & Layout (Android Companion App)
 
 ## 6. Navigation & Layout (Android Companion App)
 
