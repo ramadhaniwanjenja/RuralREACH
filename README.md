@@ -90,14 +90,19 @@ All design assets are in the `/docs` and `/hardware` folders:
 
 ## 6. Navigation & Layout (Android Companion App)
 
+## 6. Navigation & Layout (Android Companion App)
+
 The companion app has a deliberately simple three-screen flow so non-technical rural users can operate it:
 
-1. **Home screen** — two large buttons: "Send SMS" and "Voice Call". Connection status to the LoRa node shown at the top.
-2. **Send SMS screen** — phone number field, message field, big Send button. Delivery status appears as a tick when the gateway confirms.
-3. **Voice screen** — a single large push-to-talk button: hold to talk, release to listen. Signal bars show link quality.
+| Home | Send SMS | Voice Call |
+|------|----------|------------|
+![Home](designs/figma/mobile_design.png)
 
-Language can be toggled between **Kinyarwanda** and **English** from the home screen. See `docs/app-screens/` for the mockups.
+1. **Home screen** — two large buttons: "Send SMS" and "Voice Call". Connection status shown at the top.
+2. **Send SMS screen** — phone number field, message field, big Send button. Delivery tick when confirmed.
+3. **Voice screen** — a single large push-to-talk button: hold to talk, release to listen.
 
+Language can be toggled between **Kinyarwanda** and **English** from the home screen.
 ---
 
 ## 7. Security Measures
