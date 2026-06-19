@@ -77,14 +77,11 @@ python3 gateway.py
 
 ## 5. Designs
 
-All design assets are in the `/docs` and `/hardware` folders:
+All design assets are in the `/designs` and `/hardware` folders:
 
-- `docs/system-architecture.png` — overall system architecture
-- `docs/use-case.png` — use case diagram
-- `docs/sequence-sms-voice.png` — sequence diagram (SMS + voice)
-- `hardware/node-circuit.png` — **EasyEDA node circuit schematic**
-- `hardware/gateway-circuit.png` — **EasyEDA gateway circuit schematic**
-- `docs/app-screens/` — Android companion app interface screenshots
+- ![Home](designs/architecture/RuralReach%20system%20architecture%20overview.png) — overall system architecture
+- ![Home](designs/hardware/LoRa_node/LoRa_node.png) — **EasyEDA node circuit schematic**
+- ![Home](designs/hardware/Gateway_node/) — **EasyEDA gateway circuit schematic**
 
 ---
 
@@ -94,8 +91,6 @@ All design assets are in the `/docs` and `/hardware` folders:
 
 The companion app has a deliberately simple three-screen flow so non-technical rural users can operate it:
 
-| Home | Send SMS | Voice Call |
-|------|----------|------------|
 ![Home](designs/figma/mobile_design.png)
 
 1. **Home screen** — two large buttons: "Send SMS" and "Voice Call". Connection status shown at the top.
