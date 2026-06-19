@@ -23,7 +23,7 @@ Voice is push-to-talk (walkie-talkie style, ~2 s latency) because LoRa is half-d
 
 ## 2. Links
 
-- **GitHub repository:** `https://github.com/<your-username>/ruralreach-demo`
+- **GitHub repository:** `https://github.com/ramadhaniwanjenja/RuralREACH/blob/main/README.md`
 - **Video demo (5–10 min):** `<paste your YouTube unlisted / Drive link here>`
 
 ---
@@ -132,7 +132,7 @@ Field deployment is a single portable device moved between confirmed dead-zone l
 | Gateway SMS forwarding | ✅ Implemented (Python) |
 | Gateway voice routing | ⏳ In progress (Python) |
 | Android companion app | ⏳ Mockups done, coding ongoing |
-| EasyEDA schematics | ✅ Node + Gateway complete |
+| schematics | ✅ Node + Gateway complete |
 
 ---
 
