@@ -49,7 +49,7 @@ class _SmsScreenState extends State<SmsScreen> {
         backgroundColor: brandBlue,
         title: const Text('Send SMS'),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

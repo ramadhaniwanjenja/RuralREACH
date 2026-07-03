@@ -1,0 +1,9 @@
+# RuralReach gateway (ESP32-S3 + SX1262 + SIM800L) build defaults.
+# After editing, regenerate with:  rm sdkconfig && idf.py set-target esp32s3 && idf.py build
+
+# Target: Heltec WiFi LoRa 32 V3 (ESP32-S3)
+CONFIG_IDF_TARGET="esp32s3"
+
+# 8 MB flash, larger app partition
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
