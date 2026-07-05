@@ -23,6 +23,7 @@
 #include "driver/uart.h"
 #include "driver/i2s_std.h"
 #include "driver/i2s_pdm.h"
+#include "esp_adc/adc_continuous.h"
 #include "esp_timer.h"
 #include "esp_log.h"
 
@@ -53,10 +54,10 @@
  * (bypasses LoRa/Codec2). If the receiver hears a beep during a call, the
  * analog wiring + SIM800L mic are good. Set back to 0 for normal voice. */
 #define AUDIO_TEST_TONE  0
-#define MIC_SCK    GPIO_NUM_1     /* (reverse-direction mic, unused for now) */
-#define MIC_WS     GPIO_NUM_2
-#define MIC_SD     GPIO_NUM_3
-#define PTT_BTN    GPIO_NUM_0
+/* Reverse audio OUT of the SIM800L call: SPK+ -> coupling cap + divider ->
+ * ESP32 ADC (GPIO4 = ADC1 channel 3) -> Codec2 -> LoRa -> node speaker. */
+#define ADC_SPK_CHANNEL  ADC_CHANNEL_3   /* GPIO4 */
+#define REV_GAIN_SHIFT   5               /* reverse mic gain (bigger = louder) */
 
 #define SAMPLE_RATE   8000       /* Codec2 = 8 kHz */
 #define VOICE_MODE            CODEC2_MODE_1300  /* must match the node */
@@ -70,9 +71,10 @@ static const char *TAG = "gw";
 static i2c_master_dev_handle_t oled;
 static uint8_t fb[OLED_W * OLED_H / 8];
 static i2s_chan_handle_t spk_handle;
-static i2s_chan_handle_t mic_handle;
-static QueueHandle_t play_q;     /* Codec2 frames: RX loop -> decode task */
-static QueueHandle_t voice_q;    /* Codec2 frames: mic capture task -> main loop */
+static adc_continuous_handle_t adc_handle;
+static QueueHandle_t play_q;     /* Codec2 frames: RX loop -> decode -> PDM/MIC */
+static QueueHandle_t voice_q;    /* Codec2 frames: ADC(SPK) capture -> reverse LoRa TX */
+static volatile bool g_in_call = false;
 
 // ── 5x7 font (subset) ───────────────────────────────────────────────
 static const uint8_t font5x7[][5] = {
@@ -317,33 +319,30 @@ static void spk_init(void) {
     ESP_LOGI(TAG, "PDM audio out ready (GPIO%d -> R-C -> SIM800L MIC)", PDM_OUT_PIN);
 }
 
-// ── INMP441 mic (I2S) + PRG button ───────────────────────────────────
-static void mic_init(void) {
-    i2s_chan_config_t cc = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_1, I2S_ROLE_MASTER);
-    i2s_new_channel(&cc, NULL, &mic_handle);
-    i2s_std_config_t cfg = {
-        .clk_cfg  = I2S_STD_CLK_DEFAULT_CONFIG(SAMPLE_RATE),
-        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(
-                        I2S_DATA_BIT_WIDTH_32BIT, I2S_SLOT_MODE_STEREO),
-        .gpio_cfg = {
-            .mclk = I2S_GPIO_UNUSED,
-            .bclk = MIC_SCK, .ws = MIC_WS,
-            .dout = I2S_GPIO_UNUSED, .din = MIC_SD,
-        },
+// ── ADC in: read the SIM800L SPK output (reverse audio) ──────────────
+static void adc_init(void) {
+    adc_continuous_handle_cfg_t hcfg = {
+        .max_store_buf_size = 4096,
+        .conv_frame_size = 256 * SOC_ADC_DIGI_RESULT_BYTES,
     };
-    i2s_channel_init_std_mode(mic_handle, &cfg);
-    i2s_channel_enable(mic_handle);
-    ESP_LOGI(TAG, "Mic (INMP441) ready");
-}
-
-static void button_init(void) {
-    gpio_config_t io = {
-        .pin_bit_mask = 1ULL << PTT_BTN,
-        .mode = GPIO_MODE_INPUT, .pull_up_en = GPIO_PULLUP_ENABLE,
+    ESP_ERROR_CHECK(adc_continuous_new_handle(&hcfg, &adc_handle));
+    adc_digi_pattern_config_t pat = {
+        .atten = ADC_ATTEN_DB_12,        // full 0..3.3 V range
+        .channel = ADC_SPK_CHANNEL,
+        .unit = ADC_UNIT_1,
+        .bit_width = ADC_BITWIDTH_12,
     };
-    gpio_config(&io);
+    adc_continuous_config_t ccfg = {
+        .sample_freq_hz = SAMPLE_RATE,   // 8 kHz
+        .conv_mode = ADC_CONV_SINGLE_UNIT_1,
+        .format = ADC_DIGI_OUTPUT_FORMAT_TYPE2,
+        .pattern_num = 1,
+        .adc_pattern = &pat,
+    };
+    ESP_ERROR_CHECK(adc_continuous_config(adc_handle, &ccfg));
+    ESP_ERROR_CHECK(adc_continuous_start(adc_handle));
+    ESP_LOGI(TAG, "ADC ready (GPIO4/ADC1_CH3 <- SIM800L SPK @ %d Hz)", SAMPLE_RATE);
 }
-static bool ptt_pressed(void) { return gpio_get_level(PTT_BTN) == 0; }
 
 // ── Voice playback task: play_q (Codec2 frames) -> decode -> speaker ──
 // Big-stack task because Codec2 decode needs ~32 KB.
@@ -380,44 +379,38 @@ static void tone_task(void *arg) {
     }
 }
 
-// ── Voice capture task: while PRG held, mic -> Codec2 -> voice_q ──────
-static void voice_capture_task(void *arg) {
+// ── ADC capture task: SIM800L SPK -> ADC -> Codec2 -> voice_q ─────────
+// Runs only during a call. Accumulates 320-sample frames and encodes them.
+static void adc_capture_task(void *arg) {
     struct CODEC2 *c2 = codec2_create(VOICE_MODE);
-    if (!c2) { ESP_LOGE(TAG, "codec2_create (capture) failed"); vTaskDelete(NULL); return; }
-    int nsam = codec2_samples_per_frame(c2);
-    ESP_LOGI(TAG, "Voice capture ready (talk-back on PRG button)");
-    static int32_t raw[320 * 2];
+    if (!c2) { ESP_LOGE(TAG, "codec2_create (adc) failed"); vTaskDelete(NULL); return; }
+    ESP_LOGI(TAG, "ADC capture ready (SIM800L SPK -> LoRa -> node)");
+    static uint8_t adcbuf[256 * SOC_ADC_DIGI_RESULT_BYTES];
     static int16_t pcm[320];
     static uint8_t bits[16];
-    int32_t dc = 0;
+    int filled = 0;
+    int32_t dc = 2048;                    // ADC mid-rail bias tracker
     while (1) {
-        if (!ptt_pressed()) { vTaskDelay(pdMS_TO_TICKS(10)); continue; }
-        size_t need = (size_t)nsam * 2 * sizeof(int32_t), got = 0;
-        while (got < need && ptt_pressed()) {
-            size_t r = 0;
-            i2s_channel_read(mic_handle, (uint8_t *)raw + got, need - got,
-                             &r, pdMS_TO_TICKS(100));
-            got += r;
-        }
-        if (got < need) continue;
-        int32_t lpk = 0, rpk = 0;
-        for (int i = 0; i < nsam; i++) {
-            int32_t l = raw[2 * i] >> 8, rr = raw[2 * i + 1] >> 8;
-            int32_t la = l < 0 ? -l : l, ra = rr < 0 ? -rr : rr;
-            if (la > lpk) lpk = la;
-            if (ra > rpk) rpk = ra;
-        }
-        int ch = (MIC_FORCE_CH >= 0) ? MIC_FORCE_CH : (lpk >= rpk ? 0 : 1);
-        for (int i = 0; i < nsam; i++) {
-            int32_t v = raw[2 * i + ch] >> 8;
-            dc += (v - dc) >> 10;
-            int32_t s = (v - dc) >> MIC_GAIN_SHIFT;
+        if (!g_in_call) { vTaskDelay(pdMS_TO_TICKS(20)); filled = 0; continue; }
+        uint32_t got = 0;
+        if (adc_continuous_read(adc_handle, adcbuf, sizeof(adcbuf), &got,
+                                100) != ESP_OK) continue;
+        int n = got / SOC_ADC_DIGI_RESULT_BYTES;
+        for (int i = 0; i < n; i++) {
+            adc_digi_output_data_t *d =
+                (adc_digi_output_data_t *)&adcbuf[i * SOC_ADC_DIGI_RESULT_BYTES];
+            int raw = d->type2.data;          // 0..4095
+            dc += (raw - dc) >> 10;           // track & remove the DC bias
+            int32_t s = (raw - dc) << REV_GAIN_SHIFT;
             if (s > 32767) s = 32767;
             if (s < -32768) s = -32768;
-            pcm[i] = (int16_t)s;
+            pcm[filled++] = (int16_t)s;
+            if (filled >= 320) {
+                codec2_encode(c2, bits, pcm);
+                xQueueSend(voice_q, bits, 0);
+                filled = 0;
+            }
         }
-        codec2_encode(c2, bits, pcm);
-        xQueueSend(voice_q, bits, 0);
     }
 }
 
@@ -433,20 +426,20 @@ void app_main(void) {
     sim_at("AT+CMGF=1", "OK", 1500);
     sim_at("AT+CSCS=\"GSM\"", "OK", 1500);
     sim_at("AT+CMIC=0,10", "OK", 1500);   // mic gain 0..15 (raise if receiver hears you too quiet)
+    sim_at("AT+CLVL=50", "OK", 1500);     // speaker level 0..100 (feeds the reverse ADC)
     sim_at("AT+CSQ", "OK", 1500);
     sim_at("AT+CREG?", "OK", 1500);
     sim_at("AT+CMGDA=\"DEL ALL\"", "OK", 5000);   /* clear old SMS so we don't replay them */
 
     spk_init();
-    mic_init();
-    button_init();
-    play_q  = xQueueCreate(128, VOICE_FRAME_BYTES);   // RX -> decode/play
-    voice_q = xQueueCreate(64,  VOICE_FRAME_BYTES);   // mic capture -> TX
+    adc_init();
+    play_q  = xQueueCreate(128, VOICE_FRAME_BYTES);   // node voice  -> decode -> MIC
+    voice_q = xQueueCreate(64,  VOICE_FRAME_BYTES);   // SPK ADC     -> LoRa -> node
 #if AUDIO_TEST_TONE
     xTaskCreate(tone_task, "tone", 4096, NULL, 5, NULL);
 #else
-    xTaskCreate(voice_play_task,    "vplay",    40960, NULL, 5, NULL);
-    xTaskCreate(voice_capture_task, "vcapture", 40960, NULL, 5, NULL);
+    xTaskCreate(voice_play_task,  "vplay", 40960, NULL, 5, NULL);
+    xTaskCreate(adc_capture_task, "vadc",  40960, NULL, 5, NULL);
 #endif
 
     if (lora_init() != ESP_OK) {
@@ -459,12 +452,15 @@ void app_main(void) {
     static uint8_t buf[257];
     int len;
     int64_t last_poll = 0;
+    int64_t last_fwd_us = 0;                 // when the node last sent us voice
     uint8_t vpkt[1 + VOICE_FRAMES_PER_PKT * VOICE_FRAME_BYTES];
     int vframes = 0;
     vpkt[0] = VOICE_MARKER;
     while (1) {
-        // ── talk-back: hold PRG -> mic -> Codec2 -> LoRa to the node ──
-        if (ptt_pressed()) {
+        // ── reverse audio: during a call, when the node isn't talking, send the
+        //    receiver's voice (captured from SPK by the ADC) to the node ──
+        bool node_talking = (esp_timer_get_time() - last_fwd_us) < 500000;  // <0.5 s ago
+        if (g_in_call && !node_talking) {
             uint8_t frame[VOICE_FRAME_BYTES];
             while (xQueueReceive(voice_q, frame, 0) == pdTRUE) {
                 memcpy(&vpkt[1 + vframes * VOICE_FRAME_BYTES], frame, VOICE_FRAME_BYTES);
@@ -473,18 +469,18 @@ void app_main(void) {
                     vframes = 0;
                 }
             }
-            vTaskDelay(pdMS_TO_TICKS(10));
-            continue;                 // half-duplex: don't receive while talking
-        }
-        if (vframes > 0) {            // flush the tail of an utterance
-            lora_send(vpkt, 1 + vframes * VOICE_FRAME_BYTES);
-            vframes = 0;
+        } else {
+            // node is talking (or no call): drop captured reverse audio, flush tail
+            uint8_t junk[VOICE_FRAME_BYTES];
+            while (xQueueReceive(voice_q, junk, 0) == pdTRUE) { }
+            if (vframes > 0) { lora_send(vpkt, 1 + vframes * VOICE_FRAME_BYTES); vframes = 0; }
         }
 
         // uplink: LoRa packet from node -> SMS (text) or voice
         if (lora_recv(buf, sizeof(buf) - 1, &len)) {
             // voice packet: [0x01][7-byte frame]... -> queue frames for playback
             if (len > 1 && buf[0] == VOICE_MARKER) {
+                last_fwd_us = esp_timer_get_time();     // node is talking -> forward
                 int frames = 0;
                 for (int i = 1; i + VOICE_FRAME_BYTES <= len; i += VOICE_FRAME_BYTES) {
                     xQueueSend(play_q, &buf[i], 0);
@@ -492,7 +488,8 @@ void app_main(void) {
                 }
                 static int vpkts = 0;
                 if ((vpkts++ % 5) == 0) {
-                    ESP_LOGI(TAG, "voice RX: %d frames (pkt #%d)", frames, vpkts);
+                    ESP_LOGI(TAG, "voice RX: %d frames (pkt #%d, RSSI %d dBm)",
+                             frames, vpkts, lora_last_rssi());
                     ui_show("Voice RX (playing)", NULL, NULL);
                 }
                 continue;
@@ -509,12 +506,14 @@ void app_main(void) {
                 ESP_LOGI(TAG, "Dialing %s ...", num);
                 ui_show("Calling...", num, NULL);
                 sim_at(cmd, "OK", 8000);
+                g_in_call = true;              // enable the reverse audio path
             }
             // "ENDCALL" -> hang up
             else if (strncmp((char *)buf, "ENDCALL", 7) == 0) {
                 ESP_LOGI(TAG, "Hanging up");
                 sim_at("ATH", "OK", 3000);
                 ui_show("Call ended", NULL, NULL);
+                g_in_call = false;
             }
             // "<phone>|<body>" -> SMS
             else {

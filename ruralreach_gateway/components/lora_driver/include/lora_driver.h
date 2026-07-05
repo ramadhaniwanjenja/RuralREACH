@@ -45,3 +45,5 @@ void lora_start_rx(void);
 /* Non-blocking: if a valid (good-CRC) packet arrived, copy it into buf, set
  * *out_len, re-arm RX, and return true. Otherwise return false. */
 bool lora_recv(uint8_t *buf, size_t cap, int *out_len);
+/* RSSI (dBm) of the most recently received packet. */
+int lora_last_rssi(void);

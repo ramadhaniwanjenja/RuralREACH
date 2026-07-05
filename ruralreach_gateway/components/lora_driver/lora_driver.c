@@ -15,6 +15,9 @@
 
 static const char *TAG = "lora";
 static spi_device_handle_t s_spi;
+static int s_last_rssi = 0;    /* dBm of the last received packet */
+
+int lora_last_rssi(void) { return s_last_rssi; }
 
 /* ── SX1262 opcodes ─────────────────────────────────────────────────── */
 #define OP_SET_STANDBY        0x80
@@ -33,6 +36,7 @@ static spi_device_handle_t s_spi;
 #define OP_SET_TX             0x83
 #define OP_SET_RX             0x82
 #define OP_GET_RX_BUF_STATUS  0x13
+#define OP_GET_PKT_STATUS     0x14
 #define OP_READ_BUFFER        0x1E
 #define OP_SET_REGULATOR      0x96
 #define OP_CALIBRATE          0x89
@@ -258,6 +262,13 @@ bool lora_recv(uint8_t *buf, size_t cap, int *out_len)
     xfer(rbuf, rout, 3 + len);
     memcpy(buf, rout + 3, len);
     *out_len = len;
+
+    /* GetPacketStatus -> RSSI of this packet (rssi_dbm = -rssiPkt/2) */
+    uint8_t st_tx[4] = { OP_GET_PKT_STATUS, 0, 0, 0 };
+    uint8_t st_rx[4] = { 0 };
+    busy_wait();
+    xfer(st_tx, st_rx, 4);
+    s_last_rssi = -((int)st_rx[2]) / 2;
 
     lora_start_rx();                       /* re-arm */
     return true;
