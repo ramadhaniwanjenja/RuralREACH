@@ -9,11 +9,11 @@
 
 | | |
 |---|---|
-| 🔗 **GitHub repository** | https://github.com/ramadhaniwanjenja/RuralREACH |
-| 🎥 **5‑minute demo video** | https://www.youtube.com/watch?v=xAKuP7hi1q4 |
-| 📦 **Installable app (APK)** | `ruralreach_app/build/app/outputs/flutter-apk/app-release.apk` (built via `flutter build apk`) |
+|  **GitHub repository** | https://github.com/ramadhaniwanjenja/RuralREACH |
+|  **5‑minute demo video** | https://www.youtube.com/watch?v=xAKuP7hi1q4 |
+|  **Installable app (APK)** | `ruralreach_app/build/app/outputs/flutter-apk/app-release.apk` (built via `flutter build apk`) |
 
-> 📖 **How to read this document:** Sections **1–6** describe the product and how to run it,
+>  **How to read this document:** Sections **1–6** describe the product and how to run it,
 > Section **7** is the **deployment plan & execution**, Section **8** is the **testing results
 > & strategies** (with demo screenshots), and Sections **9–11** are the **analysis, discussion,
 > and recommendations** requested in the milestone rubric.
@@ -141,7 +141,7 @@ orchestrator rather than a monolith. The Flutter app is likewise split into a **
 RuralREACH/
 ├── README.md                     ← this file
 │
-├── ruralreach_app/               📱 Flutter companion app (Dart)
+├── ruralreach_app/                Flutter companion app (Dart)
 │   └── lib/
 │       ├── main.dart                     app entry point
 │       ├── bluetooth/bt_service.dart     BLE link to the Node (flutter_blue_plus)
@@ -150,7 +150,7 @@ RuralREACH/
 │           ├── sms_screen.dart           send an SMS
 │           └── voice_screen.dart         place a call + push‑to‑talk
 │
-├── ruralreach_node/              🔌 Node firmware (ESP‑IDF, ESP32‑S3)
+├── ruralreach_node/               Node firmware (ESP‑IDF, ESP32‑S3)
 │   ├── main/main.c                       BLE · OLED · mic/speaker · LoRa · Codec2 voice
 │   └── components/
 │       ├── lora_driver/                  SX1262 driver (TX + RX)   ← reused by the gateway
@@ -159,13 +159,13 @@ RuralREACH/
 │       ├── packet/                       packet framing + CRC‑16
 │       └── aes_crypto/                   AES‑128 helpers
 │
-├── ruralreach_gateway/           🛰️ Gateway firmware (ESP‑IDF, ESP32‑S3)
+├── ruralreach_gateway/            Gateway firmware (ESP‑IDF, ESP32‑S3)
 │   ├── main/main.c                       LoRa RX · SMS via SIM800L · voice decode · call control
 │   └── components/
 │       ├── lora_driver/                  same SX1262 driver as the node
 │       └── codec2/                       vendored Codec2 speech codec
 │
-└── designs/                      🎨 Schematics, architecture diagram, UI mock‑ups
+└── designs/                       Schematics, architecture diagram, UI mock‑ups
 ```
 
 **Quality practices applied:**
@@ -361,7 +361,7 @@ achieve one stretch objective:
   DAC, forcing a PDM + passive‑network workaround — a hardware limitation, not a logic error.
 - **Objective — usable by non‑technical rural users:** ✅ **Achieved** in design — a three‑screen app
   with large buttons and a Kinyarwanda/English toggle; the recipient needs no app at all.
-- **Objective — secure & private:** 🔶 **Partially met.** AES‑128 and CRC‑16 components are written
+- **Objective — secure & private:**  **Partially met.** AES‑128 and CRC‑16 components are written
   but not yet enabled on the wire; the current link carries plaintext `phone|body` frames.
 
 **How objectives were reached:** the biggest wins came from correct hardware bring‑up (identifying
