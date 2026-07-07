@@ -402,17 +402,6 @@ that are geographically close to coverage yet effectively offline. Because the r
   one node serves many users who pair their own phones.
 - Give the SIM800L a **dedicated, well‑regulated power supply**; most field failures are power, not code.
 
-**Future work (with the supervisor):**
-
-- 🔧 **Finish the analog GSM audio bridge** (reverse `SPK+ → ADC → Codec2 → LoRa`) and tune gain
-  (`REV_GAIN_SHIFT`, `AT+CMIC`, `AT+CLVL`) for a full live call, or switch to a PCM‑capable modem.
-- 🔒 **Enable AES‑128‑CBC + CRC‑16 on the wire** using the existing `packet/` and `aes_crypto/`
-  components, plus the sequence‑number replay cache.
-- 🔁 Add a **jitter buffer** and adaptive gain for smoother voice; explore **automatic SF/bit‑rate
-  selection** based on link RSSI.
-- 🔋 Add **solar + battery** power and a weatherproof enclosure for unattended field deployment.
-- 📶 Support **multiple nodes per gateway** (addressing + scheduling) to serve several dead zones.
-
 ---
 
 ## 12. License & credits
