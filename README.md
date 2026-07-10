@@ -11,7 +11,7 @@
 |---|---|
 |  **GitHub repository** | https://github.com/ramadhaniwanjenja/RuralREACH |
 |  **5‑minute demo video** | https://www.youtube.com/watch?v=xAKuP7hi1q4 |
-|  **Installable app (APK)** | `ruralreach_app/build/app/outputs/flutter-apk/app-release.apk` (built via `flutter build apk`) |
+|  **Installable app (APK)** | https://drive.google.com/file/d/1Qzdi7x9OukgJJwdIaHv1YReMy6TMlLwY/view?usp=sharing|
 
 >  **How to read this document:** Sections **1–6** describe the product and how to run it,
 > Section **7** is the **deployment plan & execution**, Section **8** is the **testing results
@@ -75,7 +75,7 @@ is compressed with **Codec2 (1300 bps)** to fit inside LoRa's tiny bandwidth.
 
 | Node circuit | Gateway circuit |
 |---|---|
-| ![Node schematic](designs/hardware/LoRa_node/LoRa_node.png) | ![Gateway schematic](designs/hardware/Gateway_node/Gatewaynode.png) |
+| ![Node schematic](designs/hardware/LoRa_node/LoRa_node-Schematic.png) | ![Gateway schematic](designs/hardware/Gateway_node/Gatewaynode_schematic.png) |
 
 **Companion app UI (Figma):**
 
@@ -232,7 +232,7 @@ rm -f sdkconfig && idf.py set-target esp32s3 && idf.py build
 idf.py -p /dev/ttyUSB1 flash monitor
 ```
 
-> ⚡ Power the SIM800L from its **own** 3.7–4.2 V ≥2 A supply with a common ground — under‑powering
+>  Power the SIM800L from its **own** 3.7–4.2 V ≥2 A supply with a common ground — under‑powering
 > it is the #1 cause of a modem that won't answer AT commands.
 
 **Radio settings (must match on both boards):** 433 MHz · SF7 · BW 125 kHz · CR 4/5 · sync word
@@ -275,7 +275,7 @@ Testing used **four complementary strategies**: (a) **unit / self‑test** in fi
 **field / environmental** RF tests. Each test below was run with **different data values** and
 **different hardware configurations** to satisfy the rubric.
 
-> 📸 **Screenshots for each test live in [`docs/screenshots/`](docs/screenshots/)** — drop the files
+>  **Screenshots for each test live in [`docs/screenshots/`](docs/screenshots/)** — drop the files
 > named there and the images below render automatically.
 
 ### Test 1 — App ⇄ Node over Bluetooth LE (integration)
