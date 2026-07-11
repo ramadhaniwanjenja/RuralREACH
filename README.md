@@ -1,11 +1,9 @@
 # 📡 RuralReach — Final Product
 
-> **An embedded LoRa‑to‑GSM bridge that brings SMS and push‑to‑talk voice to cellular dead zones in rural Rwanda — the person you contact just uses an ordinary phone on the normal mobile network.**
+> **An embedded LoRa‑to‑GSM bridge that brings SMS and push‑to‑talk voice to cellular dead zones in rural Rwanda, the person you contact just uses an ordinary phone on the normal mobile network.**
 
 **Author:** Ramadhani Shafii Wanjenja
-**Programme:** BSc. Software Engineering (Low‑Level Programming) — African Leadership University
-**Supervisor:** Thadee Gatera
-**Track:** Low Level · **Stack:** C (ESP‑IDF firmware) · Dart / Flutter (companion app)
+**Programme:** BSc. Software Engineering (Low‑Level Programming) African Leadership University
 
 | | |
 |---|---|
@@ -16,7 +14,7 @@
 >  **How to read this document:** Sections **1–6** describe the product and how to run it,
 > Section **7** is the **deployment plan & execution**, Section **8** is the **testing results
 > & strategies** (with demo screenshots), and Sections **9–11** are the **analysis, discussion,
-> and recommendations** requested in the milestone rubric.
+> and recommendations**
 
 ---
 
@@ -24,7 +22,7 @@
 
 1. [What it does](#1-what-it-does)
 2. [System architecture](#2-system-architecture)
-3. [Functionality & scope alignment (vs. proposal)](#3-functionality--scope-alignment-vs-proposal)
+3. [Functionality & scope alignment](#3-functionality--scope-alignment)
 4. [Algorithms & custom logic](#4-algorithms--custom-logic)
 5. [Code quality & project structure](#5-code-quality--project-structure)
 6. [Install and run — step by step](#6-install-and-run--step-by-step)
@@ -46,7 +44,7 @@ coverage by ridges and hills. RuralReach bridges that gap with a low‑power **L
   types an **SMS** or holds a **push‑to‑talk** button to speak.
 - The Node sends this over **LoRa (433 MHz)** to a **Gateway** placed where there *is* coverage.
 - The Gateway pushes it into the **real mobile network** through a **SIM800L** GSM modem, so the
-  recipient receives a **normal SMS** or a **normal phone call** — no app, no special hardware.
+  recipient receives a **normal SMS** or a **normal phone call** , no app, no special hardware.
 - **Replies** from the recipient travel back the same way and appear on the app and the Node's OLED.
 
 Voice is **push‑to‑talk** (walkie‑talkie style, ~1–2 s latency) because LoRa is half‑duplex, and
@@ -58,16 +56,9 @@ is compressed with **Codec2 (1300 bps)** to fit inside LoRa's tiny bandwidth.
 
 ![RuralReach system architecture overview](designs/architecture/RuralReach%20system%20architecture%20overview.png)
 
-```
- ┌──────────────┐  Bluetooth LE   ┌────────────────────────┐   LoRa 433 MHz    ┌───────────────────────────┐   GSM      ┌───────────────┐
- │  Phone + app │ ──────────────▶ │ NODE (ESP32‑S3+SX1262) │ ────────────────▶ │ GATEWAY (ESP32‑S3+SX1262) │ ─────────▶ │ Recipient's   │
- │  (Flutter)   │ ◀────────────── │ OLED · mic · speaker   │ ◀──────────────── │ + SIM800L GSM modem       │ ◀───────── │ ordinary phone│
- └──────────────┘  replies/notify └────────────────────────┘  voice/SMS/call   └───────────────────────────┘  SMS + call└───────────────┘
-   (dead zone — no cell signal)                                              (has cell coverage)
-```
 
-- **Node** and **Gateway** are the *same* board type — a **Heltec WiFi LoRa 32 V3‑class** board
-  (**ESP32‑S3 + SX1262 + 0.96″ OLED**). The seller mislabels it "SX1278 V3"; GPIO usage proves it is an S3.
+- **Node** and **Gateway** are the *same* board type  a **Heltec WiFi LoRa 32 V3‑class** board
+  (**ESP32‑S3 + SX1262 + 0.96″ OLED**).
 - The **app** talks to the Node over **Bluetooth LE** (Nordic UART Service), *not* Classic
   Bluetooth — the ESP32‑S3 has BLE only.
 
@@ -83,24 +74,20 @@ is compressed with **Codec2 (1300 bps)** to fit inside LoRa's tiny bandwidth.
 
 ---
 
-## 3. Functionality & scope alignment (vs. proposal)
+## 3. Functionality & scope alignment
 
-The proposal promised a device that lets people in dead zones **send SMS** and **talk to an
-ordinary phone** over the normal cellular network via a LoRa bridge. Status against that scope:
 
-| Capability (from proposal) | Status | Evidence |
-|---|---|---|
-| App ⇄ Node over Bluetooth LE | ✅ Working | §8 Test 1 |
-| **SMS uplink**: app → Node → LoRa → Gateway → recipient's phone | ✅ Delivered to a real handset | §8 Test 2 |
-| **SMS reply / downlink**: recipient → Gateway → LoRa → Node OLED + app | ✅ Working | §8 Test 3 |
-| **Voice over LoRa** (Codec2 1300, push‑to‑talk, two‑way) | ✅ Working | §8 Test 4 |
-| **GSM call setup** (Gateway dials the recipient, phone rings) | ✅ Working | §8 Test 5 |
-| Bilingual UI (Kinyarwanda / English) | ✅ In app | §8 Test 1 |
+| Capability | Status |
+|---|---|
+| App ⇄ Node over Bluetooth LE | ✅ Working | 
+| **SMS uplink**: app → Node → LoRa → Gateway → recipient's phone | ✅ Delivered to a real handset | 
+| **SMS reply / downlink**: recipient → Gateway → LoRa → Node OLED + app | ✅ Working |
+| **Voice over LoRa** (Codec2 1300, push‑to‑talk, two‑way) | ✅ Working |
+| **GSM call setup** (Gateway dials the recipient, phone rings) | ✅ Working |
+| Bilingual UI (Kinyarwanda / English) | ✅ In app |
 
 **Bottom line:** all core communication paths in the approved scope (SMS both ways, LoRa voice,
-call setup) are implemented and demonstrated end‑to‑end. The one item still in progress — pushing
-live analog audio into a *GSM* call — is a hardware‑integration stretch goal (the ESP32‑S3 has no
-DAC, so it needs PWM/PDM + passive networks); its forward direction is already proven with a test tone.
+call setup) are implemented and demonstrated end‑to‑end.
 
 ---
 
@@ -130,7 +117,7 @@ handling rather than CRUD. The custom algorithms are:
 
 ---
 
-## 5. Code quality & project structure
+## 5.project structure
 
 The firmware follows ESP‑IDF's **component model** — each concern is an independent, reusable
 module with its own `include/` public header and `CMakeLists.txt`, so `main.c` stays an
@@ -168,18 +155,7 @@ RuralREACH/
 └── designs/                       Schematics, architecture diagram, UI mock‑ups
 ```
 
-**Quality practices applied:**
 
-- **Modularity / reuse** — the *same* `lora_driver` and `codec2` components serve both the node and
-  the gateway; the node and gateway are symmetric (both mic + speaker + `voice_task` +
-  `voice_play_task`), so behaviour is shared, not duplicated.
-- **Separation of concerns** — audio, radio, crypto, and packet framing each live behind a public
-  header; the app separates BLE transport from UI screens.
-- **Clear naming & FreeRTOS discipline** — dedicated tasks (`voice_task`, `voice_play_task`,
-  `adc_capture_task`) with documented stack sizes (Codec2 needs ≥32 KB — learned and encoded as a
-  40 KB constant), and a single documented LoRa owner to avoid races.
-- **Reproducible builds** — `sdkconfig.defaults` pins the target/flash; vendored Codec2 is isolated
-  in its own component with `-w` so upstream warnings never break our build.
 
 ---
 
@@ -275,8 +251,7 @@ Testing used **four complementary strategies**: (a) **unit / self‑test** in fi
 **field / environmental** RF tests. Each test below was run with **different data values** and
 **different hardware configurations** to satisfy the rubric.
 
->  **Screenshots for each test live in [`docs/screenshots/`](docs/screenshots/)** — drop the files
-> named there and the images below render automatically.
+>  **Screenshots for each test live in [`docs/screenshots/`](docs/screenshots/)** 
 
 ### Test 1 — App ⇄ Node over Bluetooth LE (integration)
 **Strategy:** integration. **Inputs varied:** Location on/off, filter‑by‑name vs. by‑UUID, EN & RW UI.
