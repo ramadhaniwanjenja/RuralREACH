@@ -9,7 +9,7 @@
 |---|---|
 |  **GitHub repository** | https://github.com/ramadhaniwanjenja/RuralREACH |
 |  **5‑minute demo video** | https://www.youtube.com/watch?v=xAKuP7hi1q4 |
-|  **Installable app (APK)** | https://drive.google.com/file/d/1Qzdi7x9OukgJJwdIaHv1YReMy6TMlLwY/view?usp=sharing|
+|  **Installable app (APK)** | https://drive.google.com/file/d/1WHfY3WKErfB5mPWGwJTGLQxZvni1EFCX/view?usp=sharing|
 
 >  **How to read this document:** Sections **1–6** describe the product and how to run it,
 > Section **7** is the **deployment plan & execution**, Section **8** is the **testing results
