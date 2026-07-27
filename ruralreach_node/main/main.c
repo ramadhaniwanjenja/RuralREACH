@@ -27,11 +27,11 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
+#include "esp_log.h"
+#include "nvs_flash.h"
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
 #include "driver/i2s_std.h"
-#include "esp_log.h"
-#include "nvs_flash.h"
 
 /* NimBLE */
 #include "nimble/nimble_port.h"
@@ -536,6 +536,13 @@ static void voice_task(void *arg) {
             if (ra > rpk) rpk = ra;
         }
         int ch = (MIC_FORCE_CH >= 0) ? MIC_FORCE_CH : (lpk >= rpk ? 0 : 1);
+        // TEMP mic diagnostic: peak level per channel while PTT held.
+        // Speak into the mic: the chosen channel's peak should jump with your
+        // voice. All-zero = mic not wired/powered; pinned-high/static = wrong
+        // channel or SEL floating.  Remove once the mic is confirmed working.
+        static int dbg = 0;
+        if ((dbg++ & 0x0F) == 0)
+            ESP_LOGI(TAG, "mic levels  L=%ld  R=%ld  ch=%d", (long)lpk, (long)rpk, ch);
         for (int i = 0; i < nsam; i++) {
             int32_t v = raw[2 * i + ch] >> 8;
             dc += (v - dc) >> 10;

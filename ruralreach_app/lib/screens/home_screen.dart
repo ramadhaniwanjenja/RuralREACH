@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../bluetooth/bt_service.dart';
 import 'sms_screen.dart';
 import 'voice_screen.dart';
+import 'legal_privacy_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -168,6 +169,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const VoiceScreen()),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _bigButton(
+                    icon: Icons.privacy_tip_outlined,
+                    label: 'Legal & Privacy',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const LegalPrivacyScreen()),
                     ),
                   ),
                 ],
